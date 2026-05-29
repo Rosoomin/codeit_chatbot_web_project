@@ -1,0 +1,12 @@
+# 환경변수 파일
+.env
+
+# 가상환경 폴더
+backend/venv/
+
+# React 빌드 결과물
+frontend/build/
+
+# 자동 생성 파일들
+node_modules/
+__pycache__/
