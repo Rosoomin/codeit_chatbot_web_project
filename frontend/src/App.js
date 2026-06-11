@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";  // useRef 추가
+import { useState, useRef } from "react";
 
 const API_URL = "https://chatbot-backend-4xch.onrender.com";
 
@@ -6,12 +6,6 @@ function App() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  // 대화 목록 - 나중에 실제 대화 저장 기능 구현 시 사용
-  const [chatHistory] = useState([
-    "Rephrase text...",
-    "Fix this code ne...",
-    "Sample Copy for...",
-  ]);
   // 사이드바 열림/닫힘 상태
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
@@ -31,7 +25,7 @@ function App() {
       const res = await fetch(`${API_URL}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: input, session_id: sessionId.current }),  // session_id 추가
+        body: JSON.stringify({ message: input, session_id: sessionId.current }),
       });
       const data = await res.json();
       setMessages((prev) => [...prev, { role: "bot", content: data.response }]);
@@ -78,25 +72,6 @@ function App() {
             + New Chat
           </button>
 
-          {/* Recent Chats 섹션 */}
-          <button style={{ background: "#1a1f2e", border: "1px solid #333", color: "#fff", borderRadius: "8px", padding: "10px 14px", cursor: "pointer", textAlign: "left" }}>
-            ↩ Recent Chats
-          </button>
-
-          {/* 이전 대화 목록 */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "4px", marginTop: "8px" }}>
-            {chatHistory.map((chat, idx) => (
-              <div
-                key={idx}
-                style={{ color: "#aaa", fontSize: "14px", padding: "8px 12px", borderRadius: "6px", cursor: "pointer" }}
-                onMouseEnter={(e) => (e.target.style.background = "#1a1f2e")}
-                onMouseLeave={(e) => (e.target.style.background = "transparent")}
-              >
-                {chat}
-              </div>
-            ))}
-          </div>
-
           {/* 하단 사용자 정보 */}
           <div style={{ marginTop: "auto", background: "#1a1f2e", border: "1px solid #333", borderRadius: "8px", padding: "10px 14px", display: "flex", alignItems: "center", gap: "10px" }}>
             <div style={{ width: "32px", height: "32px", borderRadius: "50%", background: "#555", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "14px" }}>
@@ -114,24 +89,16 @@ function App() {
       <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
 
         {/* 상단 헤더 */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 20px", background: "#fff", borderBottom: "1px solid #e0e0e0" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-            {/* 사이드바 닫혀있을 때 토글 버튼 */}
-            {!sidebarOpen && (
-              <button
-                onClick={() => setSidebarOpen(true)}
-                style={{ background: "transparent", border: "none", fontSize: "20px", cursor: "pointer" }}
-              >
-                ☰
-              </button>
-            )}
-          </div>
-          {/* 검색창 */}
-          <input
-            type="text"
-            placeholder="🔍 Search"
-            style={{ padding: "6px 14px", borderRadius: "20px", border: "1px solid #ddd", outline: "none", width: "220px", fontSize: "14px" }}
-          />
+        <div style={{ display: "flex", alignItems: "center", padding: "12px 20px", background: "#fff", borderBottom: "1px solid #e0e0e0" }}>
+          {/* 사이드바 닫혀있을 때 토글 버튼 */}
+          {!sidebarOpen && (
+            <button
+              onClick={() => setSidebarOpen(true)}
+              style={{ background: "transparent", border: "none", fontSize: "20px", cursor: "pointer" }}
+            >
+              ☰
+            </button>
+          )}
         </div>
 
         {/* 대화 내역 영역 */}
@@ -154,7 +121,7 @@ function App() {
                   maxWidth: "60%",
                   padding: "12px 16px",
                   borderRadius: msg.role === "user" ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
-                  background: msg.role === "user" ? "#fff" : "#fff",
+                  background: "#fff",
                   border: msg.role === "user" ? "1px solid #ddd" : "none",
                   borderLeft: msg.role === "bot" ? "3px solid #4CAF50" : "none",
                   fontSize: "14px",
