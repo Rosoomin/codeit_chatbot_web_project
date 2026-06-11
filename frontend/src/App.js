@@ -79,7 +79,9 @@ function App() {
         }
       }
     }
-  } catch {
+  } catch(e) {
+    // 에러 내용 콘솔에 출력 (디버깅용)
+    console.error("에러 내용:", e);
     setMessages((prev) => [
       ...prev,
       { role: "bot", content: "서버 연결 실패" },
