@@ -15,40 +15,45 @@ function App() {
 
   // AI 응답 생성 함수 - 백엔드 /chat 호출
   const sendMessage = async () => {
-    if (!input.trim()) return;
+  if (!input.trim()) return;
 
-    const userMessage = { role: "user", content: input };
-    setMessages((prev) => [...prev, userMessage]);
-    setInput("");
-    setLoading(true);
+  const userMessage = { role: "user", content: input };
+  setMessages((prev) => [...prev, userMessage]);
+  setInput("");
+  setLoading(true);
 
-    try {
-      const res = await fetch(`${API_URL}/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: input, session_id: sessionId.current }),
-      });
+  try {
+    const res = await fetch(`${API_URL}/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: input, session_id: sessionId.current }),
+    });
 
-      // SSE 스트리밍 응답을 읽기 위한 reader 설정
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let botContent = "";
+    // SSE 스트리밍 응답을 읽기 위한 reader 설정
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let botContent = "";
 
-      // 빈 봇 메시지 자리 먼저 추가 (스트리밍 토큰으로 채워나갈 자리)
-      setMessages((prev) => [...prev, { role: "bot", content: "", elapsed: null }]);
+    // 빈 봇 메시지 자리 먼저 추가 (스트리밍 토큰으로 채워나갈 자리)
+    setMessages((prev) => [...prev, { role: "bot", content: "", elapsed: null }]);
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
 
-        // 바이트 → 텍스트 디코딩
-        const text = decoder.decode(value);
+      // 바이트 → 텍스트 디코딩
+      const text = decoder.decode(value);
 
-        // "data: " 로 시작하는 줄만 파싱 (SSE 표준 포맷)
-        const lines = text.split("\n").filter(line => line.startsWith("data: "));
+      // 여러 청크가 한 번에 올 수 있어서 줄 단위로 파싱
+      const lines = text.split("\n");
 
-        for (const line of lines) {
-          const data = JSON.parse(line.replace("data: ", ""));
+      for (const line of lines) {
+        // "data: " 로 시작하는 줄만 처리
+        if (!line.startsWith("data: ")) continue;
+
+        try {
+          // "data: " 6글자 제거 후 JSON 파싱
+          const data = JSON.parse(line.slice(6));
 
           if (data.token) {
             // 토큰 하나씩 누적해서 마지막 봇 메시지 실시간 업데이트
@@ -68,17 +73,21 @@ function App() {
               return updated;
             });
           }
+        } catch(e) {
+          // JSON 파싱 실패한 줄은 무시하고 계속 진행
+          continue;
         }
       }
-    } catch {
-      setMessages((prev) => [
-        ...prev,
-        { role: "bot", content: "서버 연결 실패" },
-      ]);
-    } finally {
-      setLoading(false);
     }
-  };
+  } catch {
+    setMessages((prev) => [
+      ...prev,
+      { role: "bot", content: "서버 연결 실패" },
+    ]);
+  } finally {
+    setLoading(false);
+  }
+};
 
   // New Chat: 화면 초기화 + 새 세션 ID 발급 (이전 대화와 완전히 분리)
   const startNewChat = () => {
