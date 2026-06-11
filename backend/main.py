@@ -62,7 +62,7 @@ def get_ai_response(session_id: str, message: str) -> str:
 # 프론트엔드에서 메시지를 받아 AI에 전달하고 응답을 돌려주는 엔드포인트
 @app.post("/chat")
 def chat(req: ChatRequest):
-    response = get_ai_response(req.seesion_id, req.message)
+    response = get_ai_response(req.session_id, req.message)
     return {"response": response}
 
 # / 엔드포인트 (GET 방식)
