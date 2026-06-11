@@ -26,10 +26,50 @@ function App() {
       const res = await fetch(`${API_URL}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: input, session_id: sessionId.current, max_history: maxHistory }),
+        body: JSON.stringify({ message: input, session_id: sessionId.current }),
       });
-      const data = await res.json();
-      setMessages((prev) => [...prev, { role: "bot", content: data.response, elapsed: data.elapsed }]);
+
+      // SSE 스트리밍 응답을 읽기 위한 reader 설정
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let botContent = "";
+
+      // 빈 봇 메시지 자리 먼저 추가 (스트리밍 토큰으로 채워나갈 자리)
+      setMessages((prev) => [...prev, { role: "bot", content: "", elapsed: null }]);
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        // 바이트 → 텍스트 디코딩
+        const text = decoder.decode(value);
+
+        // "data: " 로 시작하는 줄만 파싱 (SSE 표준 포맷)
+        const lines = text.split("\n").filter(line => line.startsWith("data: "));
+
+        for (const line of lines) {
+          const data = JSON.parse(line.replace("data: ", ""));
+
+          if (data.token) {
+            // 토큰 하나씩 누적해서 마지막 봇 메시지 실시간 업데이트
+            botContent += data.token;
+            setMessages((prev) => {
+              const updated = [...prev];
+              updated[updated.length - 1] = { role: "bot", content: botContent, elapsed: null };
+              return updated;
+            });
+          }
+
+          if (data.done) {
+            // 스트리밍 완료 신호 받으면 elapsed 업데이트
+            setMessages((prev) => {
+              const updated = [...prev];
+              updated[updated.length - 1] = { role: "bot", content: botContent, elapsed: data.elapsed };
+              return updated;
+            });
+          }
+        }
+      }
     } catch {
       setMessages((prev) => [
         ...prev,

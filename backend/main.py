@@ -8,6 +8,9 @@ from pydantic import BaseModel
 from groq import Groq
 # load_dotenv: .env 파일에서 환경변수 불러오기
 from dotenv import load_dotenv
+
+from fastapi.responses import StreamingResponse
+import json
 import os
 import time
 
@@ -70,9 +73,43 @@ def get_ai_response(session_id: str, message: str, max_history: int = 10) -> str
 @app.post("/chat")
 def chat(req: ChatRequest):
     start = time.time()
-    response = get_ai_response(req.session_id, req.message)
-    elapsed = round(time.time() - start, 2)
-    return {"response": response, "elapsed": elapsed}
+
+    def generate():
+        # 스트리밍으로 토큰을 하나씩 받아서 프론트에 전달하는 제너레이터 함수
+        full_response = ""
+        client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+
+        # 세션 없으면 새로 생성
+        if req.session_id not in session_store:
+            session_store[req.session_id] = []
+
+        # 사용자 메시지 이력에 추가
+        session_store[req.session_id].append({"role": "user", "content": req.message})
+
+        # stream=True 로 Groq API 호출 → 토큰 단위로 응답 받음
+        stream = client.chat.completions.create(
+            model="llama-3.1-8b-instant",
+            messages=[SYSTEM_PROMPT] + session_store[req.session_id],
+            stream=True
+        )
+
+        # 토큰 하나씩 프론트에 SSE(Server-Sent Events) 형식으로 전송
+        for chunk in stream:
+            delta = chunk.choices[0].delta.content
+            if delta:
+                full_response += delta
+                # "data: {...}\n\n" 형식이 SSE 표준 포맷
+                yield f"data: {json.dumps({'token': delta})}\n\n"
+
+        # 스트리밍 완료 후 AI 응답 이력에 저장
+        session_store[req.session_id].append({"role": "assistant", "content": full_response})
+
+        # 완료 신호 + elapsed 프론트에 전송
+        elapsed = round(time.time() - start, 2)
+        yield f"data: {json.dumps({'done': True, 'elapsed': elapsed})}\n\n"
+
+    # text/event-stream: SSE 방식으로 스트리밍 응답
+    return StreamingResponse(generate(), media_type="text/event-stream")
 
 # / 엔드포인트 (GET 방식)
 # 서버 정상 동작 확인용 헬스체크
