@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";  // useRef 추가
 
 const API_URL = "https://chatbot-backend-4xch.onrender.com";
 
@@ -15,6 +15,9 @@ function App() {
   // 사이드바 열림/닫힘 상태
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
+  // 세션 ID - 탭이 열려있는 동안 유지, New Chat 시 새로 발급
+  const sessionId = useRef(`session_${Date.now()}`);
+
   // AI 응답 생성 함수 - 백엔드 /chat 호출
   const sendMessage = async () => {
     if (!input.trim()) return;
@@ -28,7 +31,7 @@ function App() {
       const res = await fetch(`${API_URL}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: input }),
+        body: JSON.stringify({ message: input, session_id: sessionId.current }),  // session_id 추가
       });
       const data = await res.json();
       setMessages((prev) => [...prev, { role: "bot", content: data.response }]);
@@ -40,6 +43,12 @@ function App() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // New Chat: 화면 초기화 + 새 세션 ID 발급 (이전 대화와 완전히 분리)
+  const startNewChat = () => {
+    setMessages([]);
+    sessionId.current = `session_${Date.now()}`;
   };
 
   const handleKeyDown = (e) => {
@@ -63,7 +72,7 @@ function App() {
 
           {/* New Chat 버튼 */}
           <button
-            onClick={() => setMessages([])}
+            onClick={startNewChat}
             style={{ background: "#1a1f2e", border: "1px solid #333", color: "#fff", borderRadius: "8px", padding: "10px 14px", cursor: "pointer", textAlign: "left" }}
           >
             + New Chat

@@ -25,24 +25,44 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# 세션별 대화 이력 저장 (서버 재시작 시 초기화)
+session_store: dict[str, list] = {}
+
+# QA 챗봇 역할 부여
+SYSTEM_PROMPT = {"role": "system", "content": "당신은 친절한 QA 상담 챗봇입니다. 사용자의 질문에 명확하고 도움이 되는 답변을 제공하세요."}
+
 # 채팅 요청 데이터 형식 정의
 class ChatRequest(BaseModel):
     message: str  # 사용자가 입력한 메시지
+    session_id: str = "default"
 
 # AI 응답 생성 함수 - 나중에 우리 모델로 교체할 핵심 함수
-def get_ai_response(message: str) -> str:
+def get_ai_response(session_id: str, message: str) -> str:
+    #세션 없으면 새로 생성
+    if session_id not in session_store:
+        session_store[session_id] = []
+
+    # 사용자 메시지 이력에 추가
+    session_store[session_id].append({"role": "user", "content": message})
+    
     client = Groq(api_key=os.getenv("GROQ_API_KEY"))
     response = client.chat.completions.create(
         model="llama-3.1-8b-instant",  # Groq에서 제공하는 무료 LLaMA 모델
-        messages=[{"role": "user", "content": message}]
+        messages=[SYSTEM_PROMPT] + session_store[session_id]  # 시스템 프롬프트 + 대화 이력
     )
-    return response.choices[0].message.content
+
+    answer = response.choices[0].message.content
+    
+    # AI 응답도 이력에 추가
+    session_store[session_id].append({"role": "assistant", "content": answer})
+
+    return answer
 
 # /chat 엔드포인트 (POST 방식)
 # 프론트엔드에서 메시지를 받아 AI에 전달하고 응답을 돌려주는 엔드포인트
 @app.post("/chat")
 def chat(req: ChatRequest):
-    response = get_ai_response(req.message)
+    response = get_ai_response(req.seesion_id, req.message)
     return {"response": response}
 
 # / 엔드포인트 (GET 방식)
