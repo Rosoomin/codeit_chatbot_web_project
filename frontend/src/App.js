@@ -29,7 +29,7 @@ function App() {
         body: JSON.stringify({ message: input, session_id: sessionId.current, max_history: maxHistory }),
       });
       const data = await res.json();
-      setMessages((prev) => [...prev, { role: "bot", content: data.response }]);
+      setMessages((prev) => [...prev, { role: "bot", content: data.response, elapsed: data.elapsed }]);
     } catch {
       setMessages((prev) => [
         ...prev,
@@ -147,6 +147,11 @@ function App() {
                 }}
               >
                 {msg.content}
+                {msg.elapsed && (
+                  <div style={{ fontSize: "11px", color: "#aaa", marginTop: "6px" }}>
+                    🕒 {msg.elapsed}초
+                  </div>
+                )}
               </div>
 
               {/* 유저 아바타 */}

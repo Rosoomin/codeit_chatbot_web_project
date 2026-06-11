@@ -9,6 +9,7 @@ from groq import Groq
 # load_dotenv: .env 파일에서 환경변수 불러오기
 from dotenv import load_dotenv
 import os
+import time
 
 # .env 파일 로드 (API 키 등 민감한 정보를 코드에 직접 쓰지 않기 위함)
 load_dotenv()
@@ -68,8 +69,10 @@ def get_ai_response(session_id: str, message: str, max_history: int = 10) -> str
 # 프론트엔드에서 메시지를 받아 AI에 전달하고 응답을 돌려주는 엔드포인트
 @app.post("/chat")
 def chat(req: ChatRequest):
-    response = get_ai_response(req.session_id, req.message, req.max_history)
-    return {"response": response}
+    start = time.time()
+    response = get_ai_response(req.session_id, req.message)
+    elapsed = round(time.time() - start, 2)
+    return {"response": response, "elapsed": elapsed}
 
 # / 엔드포인트 (GET 방식)
 # 서버 정상 동작 확인용 헬스체크
