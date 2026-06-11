@@ -12,6 +12,7 @@ function App() {
 
   // 세션 ID - 탭이 열려있는 동안 유지, New Chat 시 새로 발급
   const sessionId = useRef(`session_${Date.now()}`);
+  const botContentRef = useRef(""); // ESLint 루프 내 클로저 문제 해결용
 
   // AI 응답 생성 함수 - 백엔드 /chat 호출
   const sendMessage = async () => {
@@ -32,7 +33,9 @@ function App() {
     // SSE 스트리밍 응답을 읽기 위한 reader 설정
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
-    let botContent = "";
+    
+    // useRef로 루프 내 클로저 문제 해결 (botContentRef.current로 접근)
+    botContentRef.current = "";
 
     // 빈 봇 메시지 자리 먼저 추가 (스트리밍 토큰으로 채워나갈 자리)
     setMessages((prev) => [...prev, { role: "bot", content: "", elapsed: null }]);
@@ -57,10 +60,10 @@ function App() {
 
           if (data.token) {
             // 토큰 하나씩 누적해서 마지막 봇 메시지 실시간 업데이트
-            botContent += data.token;
+            botContentRef.current += data.token;
             setMessages((prev) => {
               const updated = [...prev];
-              updated[updated.length - 1] = { role: "bot", content: botContent, elapsed: null };
+              updated[updated.length - 1] = { role: "bot", content: botContentRef.current, elapsed: null };
               return updated;
             });
           }
@@ -69,7 +72,7 @@ function App() {
             // 스트리밍 완료 신호 받으면 elapsed 업데이트
             setMessages((prev) => {
               const updated = [...prev];
-              updated[updated.length - 1] = { role: "bot", content: botContent, elapsed: data.elapsed };
+              updated[updated.length - 1] = { role: "bot", content: botContentRef.current, elapsed: data.elapsed };
               return updated;
             });
           }
