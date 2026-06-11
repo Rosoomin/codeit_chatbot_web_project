@@ -33,17 +33,23 @@ SYSTEM_PROMPT = {"role": "system", "content": "당신은 친절한 QA 상담 챗
 
 # 채팅 요청 데이터 형식 정의
 class ChatRequest(BaseModel):
-    message: str  # 사용자가 입력한 메시지
+    message: str
     session_id: str = "default"
+    max_history: int = 10  # 대화 이력 최대 개수 (프론트에서 설정)
 
 # AI 응답 생성 함수 - 나중에 우리 모델로 교체할 핵심 함수
-def get_ai_response(session_id: str, message: str) -> str:
+def get_ai_response(session_id: str, message: str, max_history: int = 10) -> str:
     #세션 없으면 새로 생성
     if session_id not in session_store:
         session_store[session_id] = []
 
     # 사용자 메시지 이력에 추가
     session_store[session_id].append({"role": "user", "content": message})
+
+    # 최대 이력 초과 시 오래된 대화부터 제거 (2개씩 제거 - user/assistant 쌍)
+    while len(session_store[session_id]) > max_history * 2:
+        session_store[session_id].pop(0)
+        session_store[session_id].pop(0)
     
     client = Groq(api_key=os.getenv("GROQ_API_KEY"))
     response = client.chat.completions.create(
@@ -62,7 +68,7 @@ def get_ai_response(session_id: str, message: str) -> str:
 # 프론트엔드에서 메시지를 받아 AI에 전달하고 응답을 돌려주는 엔드포인트
 @app.post("/chat")
 def chat(req: ChatRequest):
-    response = get_ai_response(req.session_id, req.message)
+    response = get_ai_response(req.session_id, req.message, req.max_history)
     return {"response": response}
 
 # / 엔드포인트 (GET 방식)

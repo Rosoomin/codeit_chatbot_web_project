@@ -6,6 +6,7 @@ function App() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [maxHistory, setMaxHistory] = useState(10);
   // 사이드바 열림/닫힘 상태
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
@@ -25,7 +26,7 @@ function App() {
       const res = await fetch(`${API_URL}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: input, session_id: sessionId.current }),
+        body: JSON.stringify({ message: input, session_id: sessionId.current, max_history: maxHistory }),
       });
       const data = await res.json();
       setMessages((prev) => [...prev, { role: "bot", content: data.response }]);
@@ -71,6 +72,21 @@ function App() {
           >
             + New Chat
           </button>
+
+          <div style={{ marginTop: "8px" }}>
+            <div style={{ color: "#aaa", fontSize: "12px", marginBottom: "4px" }}>대화 이력 제한</div>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <input
+                type="range"
+                min="1"
+                max="20"
+                value={maxHistory}
+                onChange={(e) => setMaxHistory(Number(e.target.value))}
+                style={{ flex: 1 }}
+              />
+              <span style={{ color: "#fff", fontSize: "13px", minWidth: "30px" }}>{maxHistory}개</span>
+            </div>
+          </div>
 
           {/* 하단 사용자 정보 */}
           <div style={{ marginTop: "auto", background: "#1a1f2e", border: "1px solid #333", borderRadius: "8px", padding: "10px 14px", display: "flex", alignItems: "center", gap: "10px" }}>
